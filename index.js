@@ -1,4 +1,5 @@
 const express = require('express');
+const { dbConnection } = require('./database/config');
 require('dotenv').config();
 
 
@@ -6,6 +7,9 @@ require('dotenv').config();
 
 const app = express();
 
+// database
+
+dbConnection();
 
 // public diretory
 
