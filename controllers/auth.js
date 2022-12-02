@@ -1,6 +1,7 @@
 const { response } = require('express');
 const Usuario = require('../models/Usuario')
 const bcrypt = require('bcryptjs');
+const { generateJWT } = require('../helpers/jwt')
 
 const createUser = async( req, res = response  ) => {
     
@@ -28,45 +29,92 @@ const createUser = async( req, res = response  ) => {
 
         await usuario.save();
 
+
+        //Generate JSONWEBTOKEN JWT
+
+        const token = await generateJWT( usuario.id, usuario.name );
+
         res.status(201).json({
             ok: true,
             uid: usuario.id,
-            name: usuario.name
+            name: usuario.name,
+            token
         });
 
 
+    } catch (error) {
+
+        console.log(error)
+        res.status(500).json({
+            ok: false,
+            msg: 'Por favor hable con el administrador'
+        });
+
+    }
+}
+
+const loginUser = async( req, res = response ) => {
+    
+    const { email, password } = req.body;
+
+    try {
+
+        const  usuario = await Usuario.findOne({ email });
+
+        if( !usuario ) {
+            return res.status(400).json({
+                ok: false,
+                msg: 'El Usuario no existe con ese Email'
+            });
+        }
+
+        // confirm the passwords
+
+        const validPassword = bcrypt.compareSync( password, usuario.password );
+
+        if( !validPassword ) {
+            return res.status(400).json({
+                ok: false,
+                msg: 'Incorrect password'
+            })
+        }
+
+
+        //Generate JSONWEBTOKEN JWT
+        const token = await generateJWT( usuario.id, usuario.name );
+    
+        res.json({
+            ok: true,
+            udi: usuario.id,
+            name: usuario.name,
+            token
+        });
+ 
     } catch (error) {
         console.log(error)
         res.status(500).json({
             ok: false,
             msg: 'Por favor hable con el administrador'
-        })
+        });
     }
+  
 }
 
-const loginUser = ( req, res = response ) => {
-    
-    const {email, password } = req.body;
+const revalidarToken =  async( req, res = response ) => {
 
+    const { uid, name  } = req
 
-    res.json({
-        ok: true,
-        msg: 'Login',
-        email,
-        password
-    })
-}
-
-const renewUser =  ( req, res = response ) => {
+    // generate a new JWT and return in this request 
+    const token = await generateJWT( uid, name );
     
     res.json({
         ok: true,
-        msg: 'renew'
+        token
     })
 }
 
 module.exports = {
     createUser,
     loginUser,
-    renewUser,
+    revalidarToken,
 }
